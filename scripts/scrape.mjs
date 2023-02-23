@@ -66,7 +66,7 @@ async function getRepositoryReleaseData(owner, repository) {
     for (const error of response.errors) {
       console.error(error.message);
     }
-    process.exit(1);
+    core.setFailed(`Failed to get releases for ${owner}/${repository}`);
   });
 }
 
@@ -138,5 +138,6 @@ function formatResult(results) {
 }
 
 const result = formatResult(await processImageRepositories());
-
+console.log(result);
+console.log(JSON.stringify(result));
 core.setOutput("result", result);
