@@ -62,6 +62,7 @@ async function getRepositoryReleaseData(owner, repository) {
       tagCommit: r.node.tagCommit.oid,
     }
   ))).catch(response => {
+    console.log(JSON.stringify(response, null, 2));
     for (const error of response.errors) {
       console.error(error.message);
     }
