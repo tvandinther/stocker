@@ -138,6 +138,5 @@ function formatResult(results) {
 }
 
 const result = formatResult(await processImageRepositories());
-console.log(result);
-console.log(JSON.stringify(result));
+
 core.setOutput("result", result);

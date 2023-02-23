@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        jobString: ${{ fromJSON(needs.scrape.outputs.result) }}
+        jobString: ${{ needs.scrape.outputs.result }}
     steps:
       - name: values
         run: >
