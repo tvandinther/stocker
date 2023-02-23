@@ -15,17 +15,18 @@ jobs:
           node-version: 16
       - run: npm ci
         working-directory: ./scripts
-      - id: scrape
+      - id: scrapejob
         run: npm run scrape
         working-directory: ./scripts
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build:
+    needs: scrape
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        jobString: ${{ needs.scrape.outputs.result }}
+        jobString: ${{ needs.scrapejob.outputs.result }}
     steps:
       - name: values
         run: >
