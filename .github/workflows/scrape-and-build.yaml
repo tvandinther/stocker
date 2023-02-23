@@ -15,7 +15,7 @@ jobs:
           node-version: 16
       - run: npm ci
         working-directory: ./scripts
-      - name: scrape
+      - id: scrape
         run: npm run scrape
         working-directory: ./scripts
         env:
