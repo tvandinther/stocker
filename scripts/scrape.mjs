@@ -5,7 +5,7 @@ import fs from "fs/promises";
 import { load } from "js-yaml";
 import path from "path";
 
-const auth = createTokenAuth(env.GITHUB_TOKEN);
+const auth = createTokenAuth(process.env.GITHUB_TOKEN);
 const { token } = await auth();
 
 const graphqlWithAuth = graphql.defaults({
