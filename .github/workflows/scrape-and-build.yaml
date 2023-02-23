@@ -32,10 +32,10 @@ jobs:
     steps:
       - name: values
         run: >
-          echo "owner=$(echo ${{ matrix.jobString }} | cut -d ',' -f1 | cut -d '/' -f1)" >> $GITHUB_ENV
-          echo "repository=$(echo ${{ matrix.jobString }} | cut -d ',' -f1 | cut -d '/' -f2)" >> $GITHUB_ENV
-          echo "image=$(echo ${{ matrix.jobString }} | cut -d ',' -f2 | cut -d ':' -f1)" >> $GITHUB_ENV
-          echo "tag=$(echo ${{ matrix.jobString }} | cut -d ',' -f2 | cut -d ':' -f2)" >> $GITHUB_ENV
+          echo "owner=$(echo ${{ matrix.jobString }} | cut -d ',' -f1 | cut -d '/' -f1)" >> $GITHUB_OUTPUT
+          echo "repository=$(echo ${{ matrix.jobString }} | cut -d ',' -f1 | cut -d '/' -f2)" >> $GITHUB_OUTPUT
+          echo "image=$(echo ${{ matrix.jobString }} | cut -d ',' -f2 | cut -d ':' -f1)" >> $GITHUB_OUTPUT
+          echo "tag=$(echo ${{ matrix.jobString }} | cut -d ',' -f2 | cut -d ':' -f2)" >> $GITHUB_OUTPUT
       - uses: actions/checkout@v3
         with:
           repository: ${{ steps.values.outputs.owner }}/${{ steps.values.outputs.repository }}
