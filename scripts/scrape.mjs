@@ -32,7 +32,7 @@ query($owner: String!, $repository: String!) {
 }
 `
 
-const rootPath = path.resolve(path.dirname(import.meta.url).replace("file://", ""), "..", "..");
+const rootPath = path.resolve(path.dirname(import.meta.url).replace("file://", ""), "..");
 const repositoriesPath = path.resolve(rootPath, "repositories");
 const historyPath = path.resolve(rootPath, ".history");
 
@@ -70,7 +70,7 @@ async function getRepositoryReleaseData(owner, repository) {
 }
 
 async function getBuiltReleaseData(imageRepositoryName) {
-  return await fs.readdir(path.resolve(historyPath, imageRepositoryName));
+  return (await fs.readdir(path.resolve(historyPath, imageRepositoryName)).catch(() => []));
 }
 
 function parseOwnerRepositoryString(ownerRepositoryString) {
