@@ -5,7 +5,7 @@ import fs from "fs/promises";
 import { load } from "js-yaml";
 import path from "path";
 
-const auth = createTokenAuth(process.env.GITHUB_TOKEN);
+const auth = createTokenAuth("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");
 const { token } = await auth();
 
 const graphqlWithAuth = graphql.defaults({
@@ -91,6 +91,9 @@ async function getAll(imageRepositoryName) {
     getBuiltReleaseData(imageRepositoryName)
   ]);
 
+  console.log(`Found ${parsedReleases.length} releases for ${owner}/${repository}`);
+  console.log(`Found ${builtTags.length} built tags for ${imageRepositoryName}`);
+
   return {
     config: config,
     owner: owner,
@@ -105,6 +108,9 @@ async function processImageRepository(imageRepositoryName) {
   const tagsAlreadyBuilt = new Set(builtTags);
   const tagsInRepository = new Set(parsedReleases.map(release => release.tagName));
   const tagsToBuild = tagsInRepository.difference(tagsAlreadyBuilt);
+
+  console.log(`Found ${tagsToBuild.size} tags to build for ${owner}/${repository}`);
+  console.log(`Tags to build: ${[...tagsToBuild].join(", ")}`);
 
   return {
     owner: owner,
