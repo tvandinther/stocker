@@ -1,0 +1,61 @@
+name: "Scrape and Build"
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *"
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - run: npm ci
+        working-directory: ./scripts
+      - name: scrape
+        run: npm run scrape
+        working-directory: ./scripts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        jobString: ${{ fromJSON(needs.scrape.outputs.result).jobs }}
+    steps:
+      - name: values
+        run: >
+          echo "owner=$(echo ${{ matrix.jobString }} | cut -d ',' -f1 | cut -d '/' -f1)" >> $GITHUB_ENV
+          echo "repository=$(echo ${{ matrix.jobString }} | cut -d ',' -f1 | cut -d '/' -f2)" >> $GITHUB_ENV
+          echo "image=$(echo ${{ matrix.jobString }} | cut -d ',' -f2 | cut -d ':' -f1)" >> $GITHUB_ENV
+          echo "tag=$(echo ${{ matrix.jobString }} | cut -d ',' -f2 | cut -d ':' -f2)" >> $GITHUB_ENV
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ steps.values.outputs.owner }}/${{ steps.values.outputs.repository }}
+          ref: ${{ steps.values.outputs.tag }}
+          path: ${{ steps.values.outputs.repository }}
+      - uses: actions/checkout@v3
+        with:
+          path: stocker
+      # - idempotently create the image repository and update the readme
+      - uses: docker/build-push-action@v2
+        with:
+          context: ${{ steps.values.outputs.repository }}
+          file: stocker/${{ steps.values.outputs.image }}/Dockerfile
+          push: true
+          tags: stocker/${{ steps.values.outputs.image }}:${{ steps.values.outputs.tag }}
+      - run: >
+          cat <<- EOF > stocker/${{ steps.values.outputs.image }}/${{ steps.values.outputs.tag }}
+            Successfully built and pushed stocker/${{ steps.values.outputs.image }}:${{ steps.values.outputs.tag }}
+          EOF
+      - uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "Complete build stocker/${{ steps.values.outputs.image }}:${{ steps.values.outputs.tag }}"
+          commit_options: "--no-signoff"
+          file_pattern: stocker/${{ steps.values.outputs.image }}/${{ steps.values.outputs.tag }}
+          repository: stocker
+          branch: main
