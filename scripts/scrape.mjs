@@ -32,7 +32,7 @@ query($owner: String!, $repository: String!) {
 }
 `
 
-const rootPath = path.resolve(path.dirname(import.meta.url).replace("file://", ""), "..");
+const rootPath = path.resolve(path.dirname(import.meta.url).replace("file://", ""), "..", "..");
 const repositoriesPath = path.resolve(rootPath, "repositories");
 const historyPath = path.resolve(rootPath, ".history");
 
