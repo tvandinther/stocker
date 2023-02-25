@@ -42,7 +42,7 @@ jobs:
       - uses: docker/build-push-action@v2
         with:
           context: ${{ fromJSON(matrix.job).source.repository }}
-          file: stocker/${{ fromJSON(matrix.job).image.repository }}/Dockerfile
+          file: stocker/repositories/${{ fromJSON(matrix.job).image.repository }}/Dockerfile
           push: true
           tags: stocker/${{ fromJSON(matrix.job).image.repository }}:${{ fromJSON(matrix.job).image.tag }}
       - run: >
