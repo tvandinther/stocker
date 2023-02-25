@@ -116,6 +116,7 @@ async function processImageRepository(imageRepositoryName) {
   return {
     owner: owner,
     repository: repository,
+    imageRepository: imageRepositoryName,
     tagsToBuild: tagsToBuild,
   }
 }
@@ -129,12 +130,18 @@ async function processImageRepositories() {
 function formatResult(results) {
   return results.flatMap(e => 
     [...e.tagsToBuild].map(tag => ({
-        owner: e.owner,
-        repository: e.repository,
-        tag: tag,
+        source: {
+          owner: e.owner,
+          repository: e.repository,
+          tag: tag,
+        },
+        image: {
+          repository: e.imageRepository,
+          tag: tag,
+        }
       })
     ))
-    .map(r => `${r.owner}/${r.repository},${r.tag}`)
+    .map(JSON.stringify)
 }
 
 const result = formatResult(await processImageRepositories());
