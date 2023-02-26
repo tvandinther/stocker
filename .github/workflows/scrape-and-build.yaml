@@ -53,13 +53,13 @@ jobs:
           token=$(jq -r .token <<< $response)
           echo "::add-mask::token=${token}" >> GITHUB_OUTPUT
       - run: npm run createDockerHubRepository
-        working-directory: ./scripts
+        working-directory: ./stocker/scripts
         env:
           DOCKERHUB_TOKEN: ${{ steps.login.outputs.token }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_REPOSITORY: ${{ fromJSON(matrix.job).image.repository }}
       - run: npm run updateDockerHubReadme
-        working-directory: ./scripts
+        working-directory: ./stocker/scripts
         env:
           DOCKERHUB_TOKEN: ${{ steps.login.outputs.token }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
