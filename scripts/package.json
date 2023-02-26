@@ -4,7 +4,9 @@
   "description": "",
   "main": "",
   "scripts": {
-    "scrape": "node scrape.mjs"
+    "scrape": "node scrape.mjs",
+    "createDockerhubRepository": "node createDockerhubRepository.mjs",
+    "updateDockerhubRepository": "node updateDockerhubRepository.mjs"
   },
   "author": "",
   "license": "ISC",

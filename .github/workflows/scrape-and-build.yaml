@@ -39,27 +39,57 @@ jobs:
       - uses: actions/checkout@v3
         with:
           path: stocker
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - run: npm ci
+        working-directory: ./scripts
       # - idempotently create the image repository and update the readme
       - name: Login to Docker Hub
         id: login
         shell: bash
         run: |
-          response=$(curl -s -H "Content-Type: application/json" -X POST -d '{"username": "${{ secrets.DOCKER_HUB_USERNAME }}", "password": "${{ secrets.DOCKER_HUB_PASSWORD }}"}' https://hub.docker.com/v2/users/login/)
-          token=$(echo $response | jq -r .token)
+          response=$(curl -s -H "Content-Type: application/json" -X POST -d '{"username": "${{ secrets.DOCKERHUB_USERNAME }}", "password": "${{ secrets.DOCKERHUB_PASSWORD }}"}' https://hub.docker.com/v2/users/login/)
+          token=$(jq -r .token <<< $response)
           echo "::add-mask::token=${token}" >> GITHUB_OUTPUT
-      - shell: bash
-        run: |
-          curl -s -H "Authorization: JWT ${{ steps.login.outputs.token }}" "https://hub.docker.com/v2/repositories/" \
-          --data 'description=test' \
-          --data 'full_description=full-description' \
-          --data 'is_private=false' \
-          --data 'name=${{ fromJSON(matrix.job).source.repository }}' \
-          --data "namespace=imagestocker"
-          if [ $? -eq 0 ]; then
-            echo "Successfully created repository ${{ fromJSON(matrix.job).source.repository }}"
-          else
-            echo "Repository ${{ fromJSON(matrix.job).source.repository }} already exists"
-          fi
+      - run: npm run createDockerHubRepository
+        working-directory: ./scripts
+        env:
+          DOCKERHUB_TOKEN: ${{ steps.login.outputs.token }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_REPOSITORY: ${{ fromJSON(matrix.job).image.repository }}
+      - run: npm run updateDockerHubReadme
+        working-directory: ./scripts
+        env:
+          DOCKERHUB_TOKEN: ${{ steps.login.outputs.token }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_REPOSITORY: ${{ fromJSON(matrix.job).image.repository }}
+          DOCKERHUB_FULL_DESCRIPTION: ${{ fromJSON(matrix.job).source.repository }}/README.md
+      # - shell: bash
+      #   run: |
+      #     output=$(curl -s "https://hub.docker.com/v2/repositories/" \
+      #     --header "Authorization: JWT ${{ steps.login.outputs.token }}" \
+      #     --header "Content-Type: application/json" \
+      #     --header "Accept: application/json" \
+      #     --data '{"namespace":"imagestocker","description":"test","is_private":false,"name":"${{ fromJSON(matrix.job).source.repository }}","registry":"docker"}' \
+      #     --write-out %{http_code})
+      #     response=$(sed -n 1p <<< $output)
+      #     status=$(sed -n 2p <<< $output)
+      #     case $status in
+      #       201)
+      #         echo "Successfully created repository ${{ fromJSON(matrix.job).source.repository }}"
+      #         ;;
+      #       400)
+      #         echo "Repository ${{ fromJSON(matrix.job).source.repository }} already exists"
+      #         ;;
+      #       *)
+      #         echo $(jq -r '.message' <<< $response)
+      #         ;;
+      #     esac
+      - uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
       - uses: docker/build-push-action@v2
         with:
           context: ${{ fromJSON(matrix.job).source.repository }}
