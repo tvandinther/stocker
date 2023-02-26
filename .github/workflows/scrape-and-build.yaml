@@ -16,10 +16,10 @@ jobs:
         with:
           node-version: 16
       - run: npm ci
-        working-directory: ./scripts
+        working-directory: scripts
       - id: scrapejob
         run: npm run scrape
-        working-directory: ./scripts
+        working-directory: scripts
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -53,13 +53,13 @@ jobs:
           token=$(jq -r .token <<< $response)
           echo "::add-mask::token=${token}" >> GITHUB_OUTPUT
       - run: npm run createDockerHubRepository
-        working-directory: ./stocker/scripts
+        working-directory: stocker/scripts
         env:
           DOCKERHUB_TOKEN: ${{ steps.login.outputs.token }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_REPOSITORY: ${{ fromJSON(matrix.job).image.repository }}
       - run: npm run updateDockerHubReadme
-        working-directory: ./stocker/scripts
+        working-directory: stocker/scripts
         env:
           DOCKERHUB_TOKEN: ${{ steps.login.outputs.token }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
