@@ -77,3 +77,5 @@ jobs:
           file_pattern: stocker/${{ fromJSON(matrix.job).image.repository }}/${{ fromJSON(matrix.job).image.tag }}
           repository: stocker
           branch: main
+      - uses: mxschmitt/action-tmate@v3
+        if: ${{ failure() }}
