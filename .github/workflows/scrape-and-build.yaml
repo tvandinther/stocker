@@ -42,7 +42,8 @@ jobs:
       - name: Login to Docker Hub
         id: login
         run: >
-          echo "::add-mask::response=$(curl -s -H "Content-Type: application/json" -X POST -d '{"username": "${{ secrets.DOCKER_HUB_USERNAME }}", "password": "${{ secrets.DOCKER_HUB_PASSWORD }}"}' https://hub.docker.com/v2/users/login/)" >> GITHUB_OUTPUT
+          loginResponse=$(curl -s -H "Content-Type: application/json" -X POST -d '{"username": "${{ secrets.DOCKER_HUB_USERNAME }}", "password": "${{ secrets.DOCKER_HUB_PASSWORD }}"}' https://hub.docker.com/v2/users/login/)
+          echo "::add-mask::response=${loginResponse}" >> GITHUB_OUTPUT
       - run: >
           curl -s -H "Authorization: JWT ${{ fromJSON(steps.login.outputs.response).token }}" "https://hub.docker.com/v2/repositories/" \
           --data 'description=test' \
