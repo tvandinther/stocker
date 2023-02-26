@@ -41,23 +41,32 @@ jobs:
       # - idempotently create the image repository and update the readme
       - name: Login to Docker Hub
         id: login
-        run: >
-          loginResponse=$(curl -s -H "Content-Type: application/json" -X POST -d '{"username": "${{ secrets.DOCKER_HUB_USERNAME }}", "password": "${{ secrets.DOCKER_HUB_PASSWORD }}"}' https://hub.docker.com/v2/users/login/)
-          echo "::add-mask::response=${loginResponse}" >> GITHUB_OUTPUT
-      - run: >
+        shell: bash
+        run: |
+          response=$(curl -s -H "Content-Type: application/json" -X POST -d '{"username": "${{ secrets.DOCKER_HUB_USERNAME }}", "password": "${{ secrets.DOCKER_HUB_PASSWORD }}"}' https://hub.docker.com/v2/users/login/)
+          token=$(echo $response | jq -r .token)
+          echo "::add-mask::token=${token}" >> GITHUB_OUTPUT
+      - shell: bash
+        run: |
           curl -s -H "Authorization: JWT ${{ fromJSON(steps.login.outputs.response).token }}" "https://hub.docker.com/v2/repositories/" \
           --data 'description=test' \
           --data 'full_description=full-description' \
           --data 'is_private=false' \
           --data 'name=${{ fromJSON(matrix.job).source.repository }}' \
           --data "namespace=imagestocker"
+          if [ $? -eq 0 ]; then
+            echo "Successfully created repository ${{ fromJSON(matrix.job).source.repository }}"
+          else
+            echo "Repository ${{ fromJSON(matrix.job).source.repository }} already exists"
+          fi
       - uses: docker/build-push-action@v2
         with:
           context: ${{ fromJSON(matrix.job).source.repository }}
           file: stocker/repositories/${{ fromJSON(matrix.job).image.repository }}/Dockerfile
           push: true
           tags: stocker/${{ fromJSON(matrix.job).image.repository }}:${{ fromJSON(matrix.job).image.tag }}
-      - run: >
+      - shell: bash
+        run: |
           cat <<- EOF > stocker/${{ fromJSON(matrix.job).image.repository }}/${{ fromJSON(matrix.job).image.tag }}
             Successfully built and pushed stocker/${{ fromJSON(matrix.job).image.repository }}:${{ fromJSON(matrix.job).image.tag }}
           EOF
