@@ -49,7 +49,7 @@ jobs:
           echo "::add-mask::token=${token}" >> GITHUB_OUTPUT
       - shell: bash
         run: |
-          curl -s -H "Authorization: JWT ${{ fromJSON(steps.login.outputs.response).token }}" "https://hub.docker.com/v2/repositories/" \
+          curl -s -H "Authorization: JWT ${{ steps.login.outputs.token }}" "https://hub.docker.com/v2/repositories/" \
           --data 'description=test' \
           --data 'full_description=full-description' \
           --data 'is_private=false' \
