@@ -43,7 +43,7 @@ jobs:
         with:
           node-version: 16
       - run: npm ci
-        working-directory: ./scripts
+        working-directory: stocker/scripts
       # - idempotently create the image repository and update the readme
       - name: Login to Docker Hub
         id: login
