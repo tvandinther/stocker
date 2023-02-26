@@ -29,7 +29,7 @@ jobs:
     strategy:
       matrix:
         # job: ${{ fromJSON(needs.scrape.outputs.result) }}
-        job: ["[{\"source\":{\"owner\":\"tvandinther\",\"repository\":\"Fallible\",\"tag\":\"0.1.1\"},\"image\":{\"repository\":\"fallible\",\"tag\":\"0.1.1\"}}]"]
+        job: ["{\"source\":{\"owner\":\"tvandinther\",\"repository\":\"Fallible\",\"tag\":\"0.1.1\"},\"image\":{\"repository\":\"fallible\",\"tag\":\"0.1.1\"}}"]
     steps:
       - uses: actions/checkout@v3
         with:
