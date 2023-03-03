@@ -58,14 +58,14 @@ jobs:
       - run: npm run createDockerhubRepository
         working-directory: stocker/scripts
         env:
-          INPUT_USERNAME: ${{ env.DOCKERHUB_USERNAME }}
+          INPUT_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           INPUT_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
           INPUT_REPOSITORY: ${{ fromJSON(matrix.job).image.repository }}
       
       - run: npm run updateDockerhubRepository
         working-directory: stocker/scripts
         env:
-          INPUT_USERNAME: ${{ env.DOCKERHUB_USERNAME }}
+          INPUT_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           INPUT_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
           INPUT_REPOSITORY: ${{ fromJSON(matrix.job).image.repository }}
           INPUT_FULL_DESCRIPTION_PATH: ${{ fromJSON(matrix.job).source.repository }}/README.md
@@ -76,7 +76,7 @@ jobs:
           context: ${{ fromJSON(matrix.job).source.repository }}
           file: stocker/repositories/${{ fromJSON(matrix.job).image.repository }}/Dockerfile
           load: true
-          tags: ${{ env.DOCKERHUB_USERNAME }}/${{ fromJSON(matrix.job).image.repository }}:${{ fromJSON(matrix.job).image.tag }}
+          tags: ${{ vars.DOCKERHUB_USERNAME }}/${{ fromJSON(matrix.job).image.repository }}:${{ fromJSON(matrix.job).image.tag }}
           build-args: |
             SOURCE_OWNER=${{ fromJSON(matrix.job).source.owner }}
             SOURCE_REPOSITORY=${{ fromJSON(matrix.job).source.repository }}
@@ -86,14 +86,14 @@ jobs:
       
       - name: Test image
         env:
-          IMAGE: ${{ env.DOCKERHUB_USERNAME }}/${{ fromJSON(matrix.job).image.repository }}:${{ fromJSON(matrix.job).image.tag }}
+          IMAGE: ${{ vars.DOCKERHUB_USERNAME }}/${{ fromJSON(matrix.job).image.repository }}:${{ fromJSON(matrix.job).image.tag }}
         shell: bash
         working-directory: stocker/repositories/${{ fromJSON(matrix.job).image.repository }}
         run: ./test.bash
 
       - uses: docker/login-action@v1
         with:
-          username: ${{ env.DOCKERHUB_USERNAME }}
+          username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Push image
@@ -102,7 +102,7 @@ jobs:
           context: ${{ fromJSON(matrix.job).source.repository }}
           file: stocker/repositories/${{ fromJSON(matrix.job).image.repository }}/Dockerfile
           push: true
-          tags: ${{ env.DOCKERHUB_USERNAME }}/${{ fromJSON(matrix.job).image.repository }}:${{ fromJSON(matrix.job).image.tag }}
+          tags: ${{ vars.DOCKERHUB_USERNAME }}/${{ fromJSON(matrix.job).image.repository }}:${{ fromJSON(matrix.job).image.tag }}
           build-args: |
             SOURCE_OWNER=${{ fromJSON(matrix.job).source.owner }}
             SOURCE_REPOSITORY=${{ fromJSON(matrix.job).source.repository }}
