@@ -124,7 +124,6 @@ jobs:
           commit_options: "--no-signoff"
           file_pattern: .history/${{ fromJSON(matrix.job).image.repository }}/${{ fromJSON(matrix.job).image.tag }}
           repository: stocker
-          branch: main
       
       # - uses: mxschmitt/action-tmate@v3
       #   if: ${{ failure() }}
