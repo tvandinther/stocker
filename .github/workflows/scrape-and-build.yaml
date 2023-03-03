@@ -39,13 +39,20 @@ jobs:
     permissions:
       contents: write
 
+    env:
+      SOURCE_OWNER: ${{ fromJSON(matrix.job).source.owner }}
+      SOURCE_REPOSITORY: ${{ fromJSON(matrix.job).source.repository }}
+      SOURCE_TAG: ${{ fromJSON(matrix.job).source.tag }}
+      IMAGE_REPOSITORY: ${{ fromJSON(matrix.job).image.repository }}
+      IMAGE_TAG: ${{ fromJSON(matrix.job).image.tag }}
+
     steps:
       
       - uses: actions/checkout@v3
         with:
-          repository: ${{ fromJSON(matrix.job).source.owner }}/${{ fromJSON(matrix.job).source.repository }}
-          ref: ${{ fromJSON(matrix.job).source.tag }}
-          path: ${{ fromJSON(matrix.job).source.repository }}
+          repository: ${{ env.SOURCE_OWNER }}/${{ env.SOURCE_REPOSITORY }}
+          ref: ${{ env.SOURCE_TAG }}
+          path: ${{ env.SOURCE_REPOSITORY }}
       
       - uses: actions/checkout@v3
         with:
@@ -63,35 +70,35 @@ jobs:
         env:
           INPUT_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           INPUT_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          INPUT_REPOSITORY: ${{ fromJSON(matrix.job).image.repository }}
+          INPUT_REPOSITORY: ${{ env.IMAGE_REPOSITORY }}
       
       - run: npm run updateDockerhubRepository
         working-directory: stocker/scripts
         env:
           INPUT_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
           INPUT_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          INPUT_REPOSITORY: ${{ fromJSON(matrix.job).image.repository }}
-          INPUT_FULL_DESCRIPTION_PATH: ${{ fromJSON(matrix.job).source.repository }}/README.md
+          INPUT_REPOSITORY: ${{ env.IMAGE_REPOSITORY }}
+          INPUT_FULL_DESCRIPTION_PATH: ${{ env.SOURCE_REPOSITORY }}/README.md
       
       - name: Build and export to Docker daemon
         uses: docker/build-push-action@v4
         with:
-          context: ${{ fromJSON(matrix.job).source.repository }}
-          file: stocker/repositories/${{ fromJSON(matrix.job).image.repository }}/Dockerfile
+          context: ${{ env.SOURCE_REPOSITORY }}
+          file: stocker/repositories/${{ env.IMAGE_REPOSITORY }}/Dockerfile
           load: true
-          tags: ${{ vars.DOCKERHUB_USERNAME }}/${{ fromJSON(matrix.job).image.repository }}:${{ fromJSON(matrix.job).image.tag }}
+          tags: ${{ vars.DOCKERHUB_USERNAME }}/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
           build-args: |
-            SOURCE_OWNER=${{ fromJSON(matrix.job).source.owner }}
-            SOURCE_REPOSITORY=${{ fromJSON(matrix.job).source.repository }}
-            SOURCE_TAG=${{ fromJSON(matrix.job).source.tag }}
-            IMAGE_REPOSITORY=${{ fromJSON(matrix.job).image.repository }}
-            IMAGE_TAG=${{ fromJSON(matrix.job).image.tag }}
+            SOURCE_OWNER=${{ env.SOURCE_OWNER }}
+            SOURCE_REPOSITORY=${{ env.SOURCE_REPOSITORY }}
+            SOURCE_TAG=${{ env.SOURCE_TAG }}
+            IMAGE_REPOSITORY=${{ env.IMAGE_REPOSITORY }}
+            IMAGE_TAG=${{ env.IMAGE_TAG }}
       
       - name: Test image
         env:
-          IMAGE: ${{ vars.DOCKERHUB_USERNAME }}/${{ fromJSON(matrix.job).image.repository }}:${{ fromJSON(matrix.job).image.tag }}
+          IMAGE: ${{ vars.DOCKERHUB_USERNAME }}/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
         shell: bash
-        working-directory: stocker/repositories/${{ fromJSON(matrix.job).image.repository }}
+        working-directory: stocker/repositories/${{ env.IMAGE_REPOSITORY }}
         run: ./test.bash
 
       - uses: docker/login-action@v1
@@ -102,30 +109,30 @@ jobs:
       - name: Push image
         uses: docker/build-push-action@v4
         with:
-          context: ${{ fromJSON(matrix.job).source.repository }}
-          file: stocker/repositories/${{ fromJSON(matrix.job).image.repository }}/Dockerfile
+          context: ${{ env.SOURCE_REPOSITORY }}
+          file: stocker/repositories/${{ env.IMAGE_REPOSITORY }}/Dockerfile
           push: true
-          tags: ${{ vars.DOCKERHUB_USERNAME }}/${{ fromJSON(matrix.job).image.repository }}:${{ fromJSON(matrix.job).image.tag }}
+          tags: ${{ vars.DOCKERHUB_USERNAME }}/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
           build-args: |
-            SOURCE_OWNER=${{ fromJSON(matrix.job).source.owner }}
-            SOURCE_REPOSITORY=${{ fromJSON(matrix.job).source.repository }}
-            SOURCE_TAG=${{ fromJSON(matrix.job).source.tag }}
-            IMAGE_REPOSITORY=${{ fromJSON(matrix.job).image.repository }}
-            IMAGE_TAG=${{ fromJSON(matrix.job).image.tag }}
+            SOURCE_OWNER=${{ env.SOURCE_OWNER }}
+            SOURCE_REPOSITORY=${{ env.SOURCE_REPOSITORY }}
+            SOURCE_TAG=${{ env.SOURCE_TAG }}
+            IMAGE_REPOSITORY=${{ env.IMAGE_REPOSITORY }}
+            IMAGE_TAG=${{ env.IMAGE_TAG }}
 
       - shell: bash
         working-directory: stocker
         run: |
-          mkdir -p .history/${{ fromJSON(matrix.job).image.repository }}
-          cat <<- EOF > .history/${{ fromJSON(matrix.job).image.repository }}/${{ fromJSON(matrix.job).image.tag }}
-            Successfully built and pushed stocker/${{ fromJSON(matrix.job).image.repository }}:${{ fromJSON(matrix.job).image.tag }}
+          mkdir -p .history/${{ env.IMAGE_REPOSITORY }}
+          cat <<- EOF > .history/${{ env.IMAGE_REPOSITORY }}/${{ env.IMAGE_TAG }}
+            Successfully built and pushed stocker/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
           EOF
         
       - uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: "Complete build stocker/${{ fromJSON(matrix.job).image.repository }}:${{ fromJSON(matrix.job).image.tag }}"
+          commit_message: "Complete build stocker/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}"
           commit_options: "--no-signoff"
-          file_pattern: .history/${{ fromJSON(matrix.job).image.repository }}/${{ fromJSON(matrix.job).image.tag }}
+          file_pattern: .history/${{ env.IMAGE_REPOSITORY }}/${{ env.IMAGE_TAG }}
           repository: stocker
       
       # - name: Create issue
