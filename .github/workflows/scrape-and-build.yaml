@@ -111,9 +111,10 @@ jobs:
             IMAGE_TAG=${{ fromJSON(matrix.job).image.tag }}
 
       - shell: bash
+        working-directory: stocker
         run: |
-          mkdir -p stocker/${{ fromJSON(matrix.job).image.repository }}
-          cat <<- EOF > stocker/${{ fromJSON(matrix.job).image.repository }}/${{ fromJSON(matrix.job).image.tag }}
+          mkdir -p .history/${{ fromJSON(matrix.job).image.repository }}
+          cat <<- EOF > .history/${{ fromJSON(matrix.job).image.repository }}/${{ fromJSON(matrix.job).image.tag }}
             Successfully built and pushed stocker/${{ fromJSON(matrix.job).image.repository }}:${{ fromJSON(matrix.job).image.tag }}
           EOF
       
@@ -121,7 +122,7 @@ jobs:
         with:
           commit_message: "Complete build stocker/${{ fromJSON(matrix.job).image.repository }}:${{ fromJSON(matrix.job).image.tag }}"
           commit_options: "--no-signoff"
-          file_pattern: stocker/${{ fromJSON(matrix.job).image.repository }}/${{ fromJSON(matrix.job).image.tag }}
+          file_pattern: .history/${{ fromJSON(matrix.job).image.repository }}/${{ fromJSON(matrix.job).image.tag }}
           repository: stocker
           branch: main
       
