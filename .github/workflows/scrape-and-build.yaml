@@ -118,12 +118,19 @@ jobs:
             Successfully built and pushed stocker/${{ fromJSON(matrix.job).image.repository }}:${{ fromJSON(matrix.job).image.tag }}
           EOF
       
-      - uses: stefanzweifel/git-auto-commit-action@v4
-        with:
-          commit_message: "Complete build stocker/${{ fromJSON(matrix.job).image.repository }}:${{ fromJSON(matrix.job).image.tag }}"
-          commit_options: "--no-signoff"
-          file_pattern: .history/${{ fromJSON(matrix.job).image.repository }}/${{ fromJSON(matrix.job).image.tag }}
-          repository: stocker
+      - name: Commit and push changes
+        working-directory: stocker
+        run: |
+          git add .history/${{ fromJSON(matrix.job).image.repository }}/${{ fromJSON(matrix.job).image.tag }}
+          git commit -m "Complete build stocker/${{ fromJSON(matrix.job).image.repository }}:${{ fromJSON(matrix.job).image.tag }}" --no-signoff
+          git push
+        
+      # - uses: stefanzweifel/git-auto-commit-action@v4
+      #   with:
+      #     commit_message: "Complete build stocker/${{ fromJSON(matrix.job).image.repository }}:${{ fromJSON(matrix.job).image.tag }}"
+      #     commit_options: "--no-signoff"
+      #     file_pattern: .history/${{ fromJSON(matrix.job).image.repository }}/${{ fromJSON(matrix.job).image.tag }}
+      #     repository: stocker
       
       # - uses: mxschmitt/action-tmate@v3
       #   if: ${{ failure() }}
