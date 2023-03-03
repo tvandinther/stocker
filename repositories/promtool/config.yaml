@@ -1,0 +1,2 @@
+sourceRepository: prometheus/prometheus
+description: "An image containing the promtool binary from prometheus."

@@ -10,13 +10,18 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       result: ${{ steps.scrapejob.outputs.result }}
+    
     steps:
+      
       - uses: actions/checkout@v3
+      
       - uses: actions/setup-node@v3
         with:
           node-version: 18
+      
       - run: npm ci
         working-directory: scripts
+      
       - id: scrapejob
         run: npm run scrape
         working-directory: scripts
@@ -29,78 +34,85 @@ jobs:
     strategy:
       matrix:
         # job: ${{ fromJSON(needs.scrape.outputs.result) }}
-        job: ["{\"source\":{\"owner\":\"tvandinther\",\"repository\":\"Fallible\",\"tag\":\"0.1.1\"},\"image\":{\"repository\":\"fallible\",\"tag\":\"0.1.1\"}}"]
+        job: ["{\"source\":{\"owner\":\"prometheus\",\"repository\":\"prometheus\",\"tag\":\"v2.42.0\"},\"image\":{\"repository\":\"promtool\",\"tag\":\"v2.42.0\"}}"]
+    
     steps:
+      
       - uses: actions/checkout@v3
         with:
           repository: ${{ fromJSON(matrix.job).source.owner }}/${{ fromJSON(matrix.job).source.repository }}
           ref: ${{ fromJSON(matrix.job).source.tag }}
           path: ${{ fromJSON(matrix.job).source.repository }}
+      
       - uses: actions/checkout@v3
         with:
           path: stocker
+      
       - uses: actions/setup-node@v3
         with:
           node-version: 18
+      
       - run: npm ci
         working-directory: stocker/scripts
-      # - idempotently create the image repository and update the readme
-      - name: Login to Docker Hub
-        id: login
-        shell: bash
-        run: |
-          response=$(curl -s -H "Content-Type: application/json" -X POST -d '{"username": "${{ secrets.DOCKERHUB_USERNAME }}", "password": "${{ secrets.DOCKERHUB_PASSWORD }}"}' https://hub.docker.com/v2/users/login/)
-          token=$(jq -r .token <<< $response)
-          echo "::add-mask::token=${token}" >> GITHUB_OUTPUT
+      
       - run: npm run createDockerhubRepository
         working-directory: stocker/scripts
-        env:
-          DOCKERHUB_TOKEN: ${{ steps.login.outputs.token }}
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_REPOSITORY: ${{ fromJSON(matrix.job).image.repository }}
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          token: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ fromJSON(matrix.job).image.repository }}
+      
       - run: npm run updateDockerhubRepository
         working-directory: stocker/scripts
-        env:
-          DOCKERHUB_TOKEN: ${{ steps.login.outputs.token }}
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_REPOSITORY: ${{ fromJSON(matrix.job).image.repository }}
-          DOCKERHUB_FULL_DESCRIPTION: ${{ fromJSON(matrix.job).source.repository }}/README.md
-      # - shell: bash
-      #   run: |
-      #     output=$(curl -s "https://hub.docker.com/v2/repositories/" \
-      #     --header "Authorization: JWT ${{ steps.login.outputs.token }}" \
-      #     --header "Content-Type: application/json" \
-      #     --header "Accept: application/json" \
-      #     --data '{"namespace":"imagestocker","description":"test","is_private":false,"name":"${{ fromJSON(matrix.job).source.repository }}","registry":"docker"}' \
-      #     --write-out %{http_code})
-      #     response=$(sed -n 1p <<< $output)
-      #     status=$(sed -n 2p <<< $output)
-      #     case $status in
-      #       201)
-      #         echo "Successfully created repository ${{ fromJSON(matrix.job).source.repository }}"
-      #         ;;
-      #       400)
-      #         echo "Repository ${{ fromJSON(matrix.job).source.repository }} already exists"
-      #         ;;
-      #       *)
-      #         echo $(jq -r '.message' <<< $response)
-      #         ;;
-      #     esac
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          token: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ fromJSON(matrix.job).image.repository }}
+          full_description_path: ${{ fromJSON(matrix.job).source.repository }}/README.md
+      
       - uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
-      - uses: docker/build-push-action@v2
+      
+      - name: Build and export to Docker daemon
+        uses: docker/build-push-action@v4
+        with:
+          context: ${{ fromJSON(matrix.job).source.repository }}
+          file: stocker/repositories/${{ fromJSON(matrix.job).image.repository }}/Dockerfile
+          load: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ fromJSON(matrix.job).image.repository }}:${{ fromJSON(matrix.job).image.tag }}
+          build-args: |
+            SOURCE_OWNER=${{ fromJSON(matrix.job).source.owner }}
+            SOURCE_REPOSITORY=${{ fromJSON(matrix.job).source.repository }}
+            SOURCE_TAG=${{ fromJSON(matrix.job).source.tag }}
+            IMAGE_REPOSITORY=${{ fromJSON(matrix.job).image.repository }}
+            IMAGE_TAG=${{ fromJSON(matrix.job).image.tag }}
+      
+      - name: Test image
+        run: |
+          docker run --rm ${{ secrets.DOCKERHUB_USERNAME }}/${{ fromJSON(matrix.job).image.repository }}:${{ fromJSON(matrix.job).image.tag }}
+
+      - name: Push image
+        uses: docker/build-push-action@v4
         with:
           context: ${{ fromJSON(matrix.job).source.repository }}
           file: stocker/repositories/${{ fromJSON(matrix.job).image.repository }}/Dockerfile
           push: true
-          tags: stocker/${{ fromJSON(matrix.job).image.repository }}:${{ fromJSON(matrix.job).image.tag }}
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ fromJSON(matrix.job).image.repository }}:${{ fromJSON(matrix.job).image.tag }}
+          build-args: |
+            SOURCE_OWNER=${{ fromJSON(matrix.job).source.owner }}
+            SOURCE_REPOSITORY=${{ fromJSON(matrix.job).source.repository }}
+            SOURCE_TAG=${{ fromJSON(matrix.job).source.tag }}
+            IMAGE_REPOSITORY=${{ fromJSON(matrix.job).image.repository }}
+            IMAGE_TAG=${{ fromJSON(matrix.job).image.tag }}
+
       - shell: bash
         run: |
           cat <<- EOF > stocker/${{ fromJSON(matrix.job).image.repository }}/${{ fromJSON(matrix.job).image.tag }}
             Successfully built and pushed stocker/${{ fromJSON(matrix.job).image.repository }}:${{ fromJSON(matrix.job).image.tag }}
           EOF
+      
       - uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: "Complete build stocker/${{ fromJSON(matrix.job).image.repository }}:${{ fromJSON(matrix.job).image.tag }}"
@@ -108,5 +120,6 @@ jobs:
           file_pattern: stocker/${{ fromJSON(matrix.job).image.repository }}/${{ fromJSON(matrix.job).image.tag }}
           repository: stocker
           branch: main
+      
       # - uses: mxschmitt/action-tmate@v3
       #   if: ${{ failure() }}
