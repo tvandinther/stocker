@@ -57,18 +57,18 @@ jobs:
       
       - run: npm run createDockerhubRepository
         working-directory: stocker/scripts
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          token: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: ${{ fromJSON(matrix.job).image.repository }}
+        env:
+          INPUT_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          INPUT_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          INPUT_REPOSITORY: ${{ fromJSON(matrix.job).image.repository }}
       
       - run: npm run updateDockerhubRepository
         working-directory: stocker/scripts
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          token: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: ${{ fromJSON(matrix.job).image.repository }}
-          full_description_path: ${{ fromJSON(matrix.job).source.repository }}/README.md
+        env:
+          INPUT_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          INPUT_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          INPUT_REPOSITORY: ${{ fromJSON(matrix.job).image.repository }}
+          INPUT_FULL_DESCRIPTION_PATH: ${{ fromJSON(matrix.job).source.repository }}/README.md
       
       - uses: docker/login-action@v1
         with:
