@@ -1,5 +1,6 @@
 import core from "@actions/core";
 import { API } from "./dockerhub.mjs"
+import { readConfig } from "./stocker.mjs";
 
 async function createDockerhubRepository(namespace, token, repository) {
     console.log(`Creating repository ${namespace}/${repository}`);
