@@ -36,6 +36,9 @@ jobs:
         # job: ${{ fromJSON(needs.scrape.outputs.result) }}
         job: ["{\"source\":{\"owner\":\"prometheus\",\"repository\":\"prometheus\",\"tag\":\"v2.42.0\"},\"image\":{\"repository\":\"promtool\",\"tag\":\"v2.42.0\"}}"]
     
+    permissions:
+      contents: write
+
     steps:
       
       - uses: actions/checkout@v3
@@ -133,7 +136,6 @@ jobs:
           commit_options: "--no-signoff"
           file_pattern: .history/${{ fromJSON(matrix.job).image.repository }}/${{ fromJSON(matrix.job).image.tag }}
           repository: stocker
-          token: ${{ secrets.GITHUB_TOKEN }}
       
       # - uses: mxschmitt/action-tmate@v3
       #   if: ${{ failure() }}
