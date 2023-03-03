@@ -1,20 +1,22 @@
 import core from "@actions/core";
+import { API } from "./dockerhub.mjs"
 
-async function createDockerhubRepository(namespace, repository, description) {
-    const response = await fetch("https://hub.docker.com/v2/repositories/", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "Authorization": `JWT ${process.env.DOCKERHUB_TOKEN}`
-        },
-        body: JSON.stringify({
-            "namespace": namespace,
-            "name": repository,
-            "description": description,
-            "is_private": false,
-            "registry": "docker",
-        })
+async function createDockerhubRepository(namespace, token, repository) {
+    console.log(`Creating repository ${namespace}/${repository}`);
+    console.log("Description:");
+    console.log(description);
+
+    const config = await readConfig(repository);
+    
+    const response = await API("POST", "repositories/", {
+        namespace: namespace,
+        name: repository,
+        description: config.description,
+        is_private: false,
+        registry: "docker",
+    }, {
+        username: namespace,
+        token: token
     });
 
     switch (response.status) {
@@ -32,7 +34,7 @@ async function createDockerhubRepository(namespace, repository, description) {
 }
 
 await createDockerhubRepository(
-    process.env.DOCKERHUB_USERNAME,
-    process.env.DOCKERHUB_REPOSITORY,
-    process.env.DOCKERHUB_DESCRIPTION
-);
+    core.getInput("username"),
+    core.getInput("token"),
+    core.getInput("repository")
+).catch(error => core.setFailed(error.message));
