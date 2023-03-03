@@ -7,6 +7,10 @@ async function updateDockerhubRepository(namespace, token, repository, fullDescr
     console.log(`Full description path: ${fullDescriptionPath}`)
     
     const config = await readConfig(repository);
+
+    console.log("With config:");
+    console.log(JSON.stringify(config, null, 2));
+
     const fullDescription = await readREADME(repository);
     
     const response = await API("PATCH", `repositories/${namespace}/${repository}/`, {

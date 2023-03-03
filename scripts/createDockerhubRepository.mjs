@@ -3,10 +3,11 @@ import { API } from "./dockerhub.mjs"
 
 async function createDockerhubRepository(namespace, token, repository) {
     console.log(`Creating repository ${namespace}/${repository}`);
-    console.log("Description:");
-    console.log(description);
 
     const config = await readConfig(repository);
+
+    console.log("With config:");
+    console.log(JSON.stringify(config, null, 2));
     
     const response = await API("POST", "repositories/", {
         namespace: namespace,
