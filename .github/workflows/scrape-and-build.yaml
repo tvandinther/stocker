@@ -122,7 +122,9 @@ jobs:
             IMAGE_REPOSITORY=${{ env.IMAGE_REPOSITORY }}
             IMAGE_TAG=${{ env.IMAGE_TAG }}
 
-      - shell: bash
+      - name: Create success history file
+        if: ${{ success() }}
+        shell: bash
         working-directory: stocker
         run: |
           mkdir -p .history/${{ env.IMAGE_REPOSITORY }}
@@ -130,13 +132,47 @@ jobs:
             Successfully built and pushed stocker/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
           EOF
         
+      - name: Create failure history file
+        if: ${{ failure() }}
+        shell: bash
+        working-directory: stocker
+        run: |
+          mkdir -p .history/${{ env.IMAGE_REPOSITORY }}
+          cat <<- EOF > .history/${{ env.IMAGE_REPOSITORY }}/${{ env.IMAGE_TAG }}
+            Failed to build stocker/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
+
+          EOF
+
       - uses: stefanzweifel/git-auto-commit-action@v4
+        if: ${{ success() || failure() }}
         with:
           commit_message: "Complete build stocker/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}"
           commit_options: "--no-signoff"
           file_pattern: .history/${{ env.IMAGE_REPOSITORY }}/${{ env.IMAGE_TAG }}
           repository: stocker
       
+      - name: Get Current Job Log URL
+        if: ${{ failure() }}
+        uses: Tiryoh/gha-jobid-action@v0
+        id: jobs
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          job_name: "build (${{ matrix.job }})"
+          per_page: 100
+
+      - name: View failed job log
+        id: failure
+        run: echo "log=$(gh run view --log-failed --job ${{ steps.jobs.outputs.job_id }})" >> $GITHUB_OUTPUT
+        if: ${{ failure() }}
+        shell: bash
+        working-directory: stocker
+
+      - name: Save failed job log to history file
+        run: echo ${{ steps.failure.outputs.log }} >> .history/${{ env.IMAGE_REPOSITORY }}/${{ env.IMAGE_TAG }}
+        if: ${{ failure() }}
+        shell: bash
+        working-directory: stocker
+
       - name: Create issue
         if: ${{ failure() }}
         uses: actions-ecosystem/action-create-issue@v1
@@ -146,7 +182,7 @@ jobs:
             The build of stocker/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }} failed.
             
             ```
-            ${{ steps.build.outputs.metadata }}
+            ${{ steps.failure.outputs.log }}
             ```
           labels: "bug"
           github_token: ${{ secrets.GITHUB_TOKEN }}
