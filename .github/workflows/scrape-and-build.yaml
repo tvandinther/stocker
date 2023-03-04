@@ -26,7 +26,7 @@ jobs:
         run: npm run scrape
         working-directory: scripts
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
 
   build:
     needs: scrape
@@ -156,7 +156,7 @@ jobs:
         uses: Tiryoh/gha-jobid-action@v0
         id: jobs
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ github.token }}
           job_name: "build (${{ matrix.job }})"
           per_page: 100
 
@@ -166,6 +166,8 @@ jobs:
         if: ${{ failure() }}
         shell: bash
         working-directory: stocker
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Save failed job log to history file
         run: echo ${{ steps.failure.outputs.log }} >> .history/${{ env.IMAGE_REPOSITORY }}/${{ env.IMAGE_TAG }}
@@ -185,7 +187,7 @@ jobs:
             ${{ steps.failure.outputs.log }}
             ```
           labels: "bug"
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ github.token }}
 
       # - uses: mxschmitt/action-tmate@v3
       #   if: ${{ failure() }}
