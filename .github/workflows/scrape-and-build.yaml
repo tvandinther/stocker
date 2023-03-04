@@ -149,7 +149,7 @@ jobs:
             ${{ steps.build.outputs.metadata }}
             ```
           labels: "bug"
-          token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       # - uses: mxschmitt/action-tmate@v3
       #   if: ${{ failure() }}
