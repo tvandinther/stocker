@@ -18,8 +18,6 @@ export async function API(method, path, body, auth = {}) {
 
 export async function Login(username, password) {
     if (jwt) return jwt;
-    
-console.log(`logging in with ${username} and ${password}`)
 
     const response = await API("POST", "users/login/", {
         "username": username,

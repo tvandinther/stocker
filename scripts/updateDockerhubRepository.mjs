@@ -14,7 +14,6 @@ async function updateDockerhubRepository(namespace, token, repository, fullDescr
     const fullDescription = await readREADME(repository);
     
     const response = await API("PATCH", `repositories/${namespace}/${repository}/`, {
-        "registry": "registry-1.docker.io",
         "description": config.description,
         "full_description": fullDescription,
     }, {
