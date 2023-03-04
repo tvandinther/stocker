@@ -38,6 +38,7 @@ jobs:
     
     permissions:
       contents: write
+      issues: write
 
     env:
       SOURCE_OWNER: ${{ fromJSON(matrix.job).source.owner }}
@@ -81,6 +82,7 @@ jobs:
           INPUT_FULL_DESCRIPTION_PATH: ${{ env.SOURCE_REPOSITORY }}/README.md
       
       - name: Build and export to Docker daemon
+        id: build
         uses: docker/build-push-action@v4
         with:
           context: ${{ env.SOURCE_REPOSITORY }}
@@ -135,9 +137,19 @@ jobs:
           file_pattern: .history/${{ env.IMAGE_REPOSITORY }}/${{ env.IMAGE_TAG }}
           repository: stocker
       
-      # - name: Create issue
-      #   if: ${{ failure() }}
-      #   uses: something-to-create-an-issue
+      - name: Create issue
+        if: ${{ failure() }}
+        uses: actions-ecosystem/action-create-issue@v1
+        with:
+          title: "Failed to build stocker/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}"
+          body: |
+            The build of stocker/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }} failed.
+            
+            ```
+            ${{ steps.build.outputs.metadata }}
+            ```
+          labels: "bug"
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       # - uses: mxschmitt/action-tmate@v3
       #   if: ${{ failure() }}
