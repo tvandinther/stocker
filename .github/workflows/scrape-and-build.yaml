@@ -58,7 +58,7 @@ jobs:
     steps:
       
       - name: Set up logging
-        run: "exec 2> >(tee -a /tmp/error.log >&2) > >(tee -a /tmp/out.log)"
+        run: "echo 'exec 2> >(tee -a /tmp/error.log >&2) > >(tee -a /tmp/out.log)' >> ~/.profile"
 
       - uses: actions/checkout@v3
         with:
