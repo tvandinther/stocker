@@ -24,5 +24,5 @@ jobs:
         working-directory: scripts
 
       - name: Validate repositories
-        run: npm run validateFiles
+        run: npm run validateRepositories
         working-directory: scripts
