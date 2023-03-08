@@ -57,9 +57,6 @@ jobs:
 
     steps:
       
-      - name: Set up logging
-        run: "echo -e 'exec 2> >(tee -a /tmp/error.log >&2) > >(tee -a /tmp/out.log)\n$(cat ~/.bashrc)' > ~/.bashrc"
-      
       - uses: actions/checkout@v3
         with:
           repository: ${{ env.SOURCE_OWNER }}/${{ env.SOURCE_REPOSITORY }}
@@ -70,26 +67,40 @@ jobs:
         with:
           path: stocker
       
-      - name: Build and export to Docker daemon
-        id: build
-        uses: docker/build-push-action@v4
-        with:
-          context: ${{ env.SOURCE_REPOSITORY }}
-          file: stocker/repositories/${{ env.IMAGE_REPOSITORY }}/Dockerfile
-          load: true
-          tags: ${{ vars.DOCKERHUB_USERNAME }}/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
-          build-args: |
-            SOURCE_OWNER=${{ env.SOURCE_OWNER }}
-            SOURCE_REPOSITORY=${{ env.SOURCE_REPOSITORY }}
-            SOURCE_TAG=${{ env.SOURCE_TAG }}
-            IMAGE_REPOSITORY=${{ env.IMAGE_REPOSITORY }}
-            IMAGE_TAG=${{ env.IMAGE_TAG }}
+      # - name: Build and export to Docker daemon
+      #   uses: docker/build-push-action@v4
+      #   with:
+      #     context: ${{ env.SOURCE_REPOSITORY }}
+      #     file: stocker/repositories/${{ env.IMAGE_REPOSITORY }}/Dockerfile
+      #     load: true
+      #     tags: ${{ vars.DOCKERHUB_USERNAME }}/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
+      #     build-args: |
+      #       SOURCE_OWNER=${{ env.SOURCE_OWNER }}
+      #       SOURCE_REPOSITORY=${{ env.SOURCE_REPOSITORY }}
+      #       SOURCE_TAG=${{ env.SOURCE_TAG }}
+      #       IMAGE_REPOSITORY=${{ env.IMAGE_REPOSITORY }}
+      #       IMAGE_TAG=${{ env.IMAGE_TAG }}
       
+      - name: Build image
+        run: |
+          exec 2> >(tee -a /tmp/error.log >&2) > >(tee -a /tmp/out.log)
+          docker build \
+            --file stocker/repositories/${{ env.IMAGE_REPOSITORY }}/Dockerfile \
+            --tag ${{ vars.DOCKERHUB_USERNAME }}/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }} \
+            --build-arg SOURCE_OWNER=${{ env.SOURCE_OWNER }} \
+            --build-arg SOURCE_REPOSITORY=${{ env.SOURCE_REPOSITORY }} \
+            --build-arg SOURCE_TAG=${{ env.SOURCE_TAG }} \
+            --build-arg IMAGE_REPOSITORY=${{ env.IMAGE_REPOSITORY }} \
+            --build-arg IMAGE_TAG=${{ env.IMAGE_TAG }} \
+            ${{ env.SOURCE_REPOSITORY }}
+
       - name: Test image
         env:
           IMAGE: ${{ vars.DOCKERHUB_USERNAME }}/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
         working-directory: stocker/repositories/${{ env.IMAGE_REPOSITORY }}
-        run: ./test.bash
+        run: |
+          exec 2> >(tee -a /tmp/error.log >&2) > >(tee -a /tmp/out.log)
+          ./test.bash
 
       - uses: actions/setup-node@v3
         with:
@@ -119,18 +130,23 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Push image
-        uses: docker/build-push-action@v4
-        with:
-          context: ${{ env.SOURCE_REPOSITORY }}
-          file: stocker/repositories/${{ env.IMAGE_REPOSITORY }}/Dockerfile
-          push: true
-          tags: ${{ vars.DOCKERHUB_USERNAME }}/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
-          build-args: |
-            SOURCE_OWNER=${{ env.SOURCE_OWNER }}
-            SOURCE_REPOSITORY=${{ env.SOURCE_REPOSITORY }}
-            SOURCE_TAG=${{ env.SOURCE_TAG }}
-            IMAGE_REPOSITORY=${{ env.IMAGE_REPOSITORY }}
-            IMAGE_TAG=${{ env.IMAGE_TAG }}
+        run: |
+          exec 2> >(tee -a /tmp/error.log >&2) > >(tee -a /tmp/out.log)
+          docker push ${{ vars.DOCKERHUB_USERNAME }}/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
+
+      # - name: Push image
+      #   uses: docker/build-push-action@v4
+      #   with:
+      #     context: ${{ env.SOURCE_REPOSITORY }}
+      #     file: stocker/repositories/${{ env.IMAGE_REPOSITORY }}/Dockerfile
+      #     push: true
+      #     tags: ${{ vars.DOCKERHUB_USERNAME }}/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
+      #     build-args: |
+      #       SOURCE_OWNER=${{ env.SOURCE_OWNER }}
+      #       SOURCE_REPOSITORY=${{ env.SOURCE_REPOSITORY }}
+      #       SOURCE_TAG=${{ env.SOURCE_TAG }}
+      #       IMAGE_REPOSITORY=${{ env.IMAGE_REPOSITORY }}
+      #       IMAGE_TAG=${{ env.IMAGE_TAG }}
 
       - name: Create success history file
         if: ${{ success() }}
@@ -158,15 +174,6 @@ jobs:
           commit_options: "--no-signoff"
           file_pattern: .history/${{ env.IMAGE_REPOSITORY }}/${{ env.IMAGE_TAG }}
           repository: stocker
-      
-      - name: Get Current Job Log URL
-        if: ${{ failure() }}
-        uses: Tiryoh/gha-jobid-action@v0
-        id: jobs
-        with:
-          github_token: ${{ github.token }}
-          job_name: "build (${{ matrix.job }})"
-          per_page: 100
 
       - name: View failed job log
         id: failure
