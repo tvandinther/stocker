@@ -67,20 +67,6 @@ jobs:
         with:
           path: stocker
       
-      # - name: Build and export to Docker daemon
-      #   uses: docker/build-push-action@v4
-      #   with:
-      #     context: ${{ env.SOURCE_REPOSITORY }}
-      #     file: stocker/repositories/${{ env.IMAGE_REPOSITORY }}/Dockerfile
-      #     load: true
-      #     tags: ${{ vars.DOCKERHUB_USERNAME }}/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
-      #     build-args: |
-      #       SOURCE_OWNER=${{ env.SOURCE_OWNER }}
-      #       SOURCE_REPOSITORY=${{ env.SOURCE_REPOSITORY }}
-      #       SOURCE_TAG=${{ env.SOURCE_TAG }}
-      #       IMAGE_REPOSITORY=${{ env.IMAGE_REPOSITORY }}
-      #       IMAGE_TAG=${{ env.IMAGE_TAG }}
-      
       - name: Build image
         run: |
           exec 2> >(tee -a /tmp/error.log >&2) > >(tee -a /tmp/out.log)
@@ -134,20 +120,6 @@ jobs:
           exec 2> >(tee -a /tmp/error.log >&2) > >(tee -a /tmp/out.log)
           docker push ${{ vars.DOCKERHUB_USERNAME }}/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
 
-      # - name: Push image
-      #   uses: docker/build-push-action@v4
-      #   with:
-      #     context: ${{ env.SOURCE_REPOSITORY }}
-      #     file: stocker/repositories/${{ env.IMAGE_REPOSITORY }}/Dockerfile
-      #     push: true
-      #     tags: ${{ vars.DOCKERHUB_USERNAME }}/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
-      #     build-args: |
-      #       SOURCE_OWNER=${{ env.SOURCE_OWNER }}
-      #       SOURCE_REPOSITORY=${{ env.SOURCE_REPOSITORY }}
-      #       SOURCE_TAG=${{ env.SOURCE_TAG }}
-      #       IMAGE_REPOSITORY=${{ env.IMAGE_REPOSITORY }}
-      #       IMAGE_TAG=${{ env.IMAGE_TAG }}
-
       - name: Create success history file
         if: ${{ success() }}
         working-directory: stocker
@@ -167,6 +139,19 @@ jobs:
 
           EOF
 
+      - name: View failed job log
+        if: ${{ failure() }}
+        id: failure
+        run: |
+          set -Eeuo pipefail
+          echo "log=$(cat /tmp/error.log)" >> $GITHUB_OUTPUT
+        working-directory: stocker
+
+      - name: Append failed job log to history file
+        run: echo ${{ steps.failure.outputs.log }} >> .history/${{ env.IMAGE_REPOSITORY }}/${{ env.IMAGE_TAG }}
+        if: ${{ failure() }}\
+        working-directory: stocker
+
       - uses: stefanzweifel/git-auto-commit-action@v4
         if: ${{ success() || failure() }}
         with:
@@ -174,21 +159,6 @@ jobs:
           commit_options: "--no-signoff"
           file_pattern: .history/${{ env.IMAGE_REPOSITORY }}/${{ env.IMAGE_TAG }}
           repository: stocker
-
-      - name: View failed job log
-        id: failure
-        run: |
-          set -Eeuo pipefail
-          echo "log=$(cat /tmp/error.log)" >> $GITHUB_OUTPUT
-        if: ${{ failure() }}
-        working-directory: stocker
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-      - name: Save failed job log to history file
-        run: echo ${{ steps.failure.outputs.log }} >> .history/${{ env.IMAGE_REPOSITORY }}/${{ env.IMAGE_TAG }}
-        if: ${{ failure() }}\
-        working-directory: stocker
 
       - name: Create issue
         if: ${{ failure() }}
@@ -203,7 +173,3 @@ jobs:
             ```
           labels: "bug"
           github_token: ${{ github.token }}
-
-      - uses: mxschmitt/action-tmate@v3
-        if: ${{ failure() }}
-        timeout-minutes: 10
