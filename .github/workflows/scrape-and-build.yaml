@@ -58,8 +58,8 @@ jobs:
     steps:
       
       - name: Set up logging
-        run: "echo 'exec 2> >(tee -a /tmp/error.log >&2) > >(tee -a /tmp/out.log)' >> ~/.bashrc"
-
+        run: "echo -e 'exec 2> >(tee -a /tmp/error.log >&2) > >(tee -a /tmp/out.log)\n$(cat ~/.bashrc)' > ~/.bashrc"
+      
       - uses: actions/checkout@v3
         with:
           repository: ${{ env.SOURCE_OWNER }}/${{ env.SOURCE_REPOSITORY }}
@@ -69,28 +69,6 @@ jobs:
       - uses: actions/checkout@v3
         with:
           path: stocker
-      
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 18
-      
-      - run: npm ci
-        working-directory: stocker/scripts
-      
-      - run: npm run createDockerhubRepository
-        working-directory: stocker/scripts
-        env:
-          INPUT_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
-          INPUT_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          INPUT_REPOSITORY: ${{ env.IMAGE_REPOSITORY }}
-      
-      - run: npm run updateDockerhubRepository
-        working-directory: stocker/scripts
-        env:
-          INPUT_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
-          INPUT_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          INPUT_REPOSITORY: ${{ env.IMAGE_REPOSITORY }}
-          INPUT_FULL_DESCRIPTION_PATH: ${{ env.SOURCE_REPOSITORY }}/README.md
       
       - name: Build and export to Docker daemon
         id: build
@@ -112,6 +90,28 @@ jobs:
           IMAGE: ${{ vars.DOCKERHUB_USERNAME }}/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
         working-directory: stocker/repositories/${{ env.IMAGE_REPOSITORY }}
         run: ./test.bash
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      
+      - run: npm ci
+        working-directory: stocker/scripts
+      
+      - run: npm run createDockerhubRepository
+        working-directory: stocker/scripts
+        env:
+          INPUT_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+          INPUT_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          INPUT_REPOSITORY: ${{ env.IMAGE_REPOSITORY }}
+      
+      - run: npm run updateDockerhubRepository
+        working-directory: stocker/scripts
+        env:
+          INPUT_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+          INPUT_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          INPUT_REPOSITORY: ${{ env.IMAGE_REPOSITORY }}
+          INPUT_FULL_DESCRIPTION_PATH: ${{ env.SOURCE_REPOSITORY }}/README.md
 
       - uses: docker/login-action@v1
         with:
@@ -170,7 +170,9 @@ jobs:
 
       - name: View failed job log
         id: failure
-        run: echo "log=$(cat /tmp/error.log)" >> $GITHUB_OUTPUT
+        run: |
+          set -Eeuo pipefail
+          echo "log=$(cat /tmp/error.log)" >> $GITHUB_OUTPUT
         if: ${{ failure() }}
         working-directory: stocker
         env:
