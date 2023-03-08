@@ -15,9 +15,9 @@ const graphqlWithAuth = graphql.defaults({
 })
 
 const releasesQuery = `
-query($owner: String!, $repository: String!) {
+query($owner: String!, $repository: String!, $latest: Int = 10) {
   repository(owner: $owner, name: $repository) {
-    releases(last: 100) {
+    releases(first: $latest) {
       edges {
         node {
           tagName
@@ -50,10 +50,11 @@ async function parseImageRepositoryConfig(imageRepositoryName) {
   return load(file);
 }
 
-async function getRepositoryReleaseData(owner, repository) {
+async function getRepositoryReleaseData(owner, repository, latest) {
   return graphqlWithAuth(releasesQuery, {
       owner: owner,
       repository: repository,
+      latest: latest,
     }
   ).then(response => response.repository.releases.edges.map(r => (
     {
@@ -88,7 +89,7 @@ async function getAll(imageRepositoryName) {
   const { owner, repository } = parseOwnerRepositoryString(config.sourceRepository);
 
   const [parsedReleases, builtTags] = await Promise.all([
-    getRepositoryReleaseData(owner, repository),
+    getRepositoryReleaseData(owner, repository, config.scrape.latest),
     getBuiltReleaseData(imageRepositoryName)
   ]);
 
