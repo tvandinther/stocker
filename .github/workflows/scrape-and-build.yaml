@@ -151,13 +151,21 @@ jobs:
         if: ${{ failure() }}\
         working-directory: stocker
 
-      - uses: stefanzweifel/git-auto-commit-action@v4
+      - name: Update repository with history file
         if: ${{ success() || failure() }}
-        with:
-          commit_message: "Complete build stocker/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}"
-          commit_options: "--no-signoff"
-          file_pattern: .history/${{ env.IMAGE_REPOSITORY }}/${{ env.IMAGE_TAG }}
-          repository: stocker
+        working-directory: stocker
+        timeout-minutes: 5
+        run: |
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          git add .history/${{ env.IMAGE_REPOSITORY }}/${{ env.IMAGE_TAG }}
+          git commit -m "Update history file for stocker/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}"
+          
+          while [ $? -ne 0 ]; do
+            git pull --rebase
+            git push && break
+            sleep 5
+          done
 
       - name: Create issue
         if: ${{ failure() }}
