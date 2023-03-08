@@ -58,7 +58,7 @@ jobs:
     steps:
       
       - name: Set up logging
-        run: "exec 2> >(tee -a /log/stocker/error.log >&2) > >(tee -a /log/stocker/out.log)"
+        run: "exec 2> >(tee -a /tmp/error.log >&2) > >(tee -a /tmp/out.log)"
 
       - uses: actions/checkout@v3
         with:
@@ -170,7 +170,7 @@ jobs:
 
       - name: View failed job log
         id: failure
-        run: echo "log=$(cat /log/stocker/error.log)" >> $GITHUB_OUTPUT
+        run: echo "log=$(cat /tmp/error.log)" >> $GITHUB_OUTPUT
         if: ${{ failure() }}
         working-directory: stocker
         env:
