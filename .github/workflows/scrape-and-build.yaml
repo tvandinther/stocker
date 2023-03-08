@@ -17,9 +17,6 @@ jobs:
 
     steps:
       
-      - name: Set up logging
-        run: "exec 2> >(tee -a /log/stocker/error.log >&2) > >(tee -a /log/stocker/out.log)"
-
       - uses: actions/checkout@v3
       
       - uses: actions/setup-node@v3
@@ -54,8 +51,15 @@ jobs:
       IMAGE_REPOSITORY: ${{ fromJSON(matrix.job).image.repository }}
       IMAGE_TAG: ${{ fromJSON(matrix.job).image.tag }}
 
+    defaults:
+      run:
+        shell: bash
+
     steps:
       
+      - name: Set up logging
+        run: "exec 2> >(tee -a /log/stocker/error.log >&2) > >(tee -a /log/stocker/out.log)"
+
       - uses: actions/checkout@v3
         with:
           repository: ${{ env.SOURCE_OWNER }}/${{ env.SOURCE_REPOSITORY }}
@@ -106,7 +110,6 @@ jobs:
       - name: Test image
         env:
           IMAGE: ${{ vars.DOCKERHUB_USERNAME }}/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
-        shell: bash
         working-directory: stocker/repositories/${{ env.IMAGE_REPOSITORY }}
         run: ./test.bash
 
@@ -131,7 +134,6 @@ jobs:
 
       - name: Create success history file
         if: ${{ success() }}
-        shell: bash
         working-directory: stocker
         run: |
           mkdir -p .history/${{ env.IMAGE_REPOSITORY }}
@@ -141,7 +143,6 @@ jobs:
         
       - name: Create failure history file
         if: ${{ failure() }}
-        shell: bash
         working-directory: stocker
         run: |
           mkdir -p .history/${{ env.IMAGE_REPOSITORY }}
@@ -171,15 +172,13 @@ jobs:
         id: failure
         run: echo "log=$(cat /log/stocker/error.log)" >> $GITHUB_OUTPUT
         if: ${{ failure() }}
-        shell: bash
         working-directory: stocker
         env:
           GH_TOKEN: ${{ github.token }}
 
       - name: Save failed job log to history file
         run: echo ${{ steps.failure.outputs.log }} >> .history/${{ env.IMAGE_REPOSITORY }}/${{ env.IMAGE_TAG }}
-        if: ${{ failure() }}
-        shell: bash
+        if: ${{ failure() }}\
         working-directory: stocker
 
       - name: Create issue
