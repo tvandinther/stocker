@@ -160,7 +160,7 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git add .history/${{ env.IMAGE_REPOSITORY }}/${{ env.IMAGE_TAG }}
           git commit -m "Update history file for stocker/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}"
-          
+          git push
           while [ $? -ne 0 ]; do
             git pull --rebase
             git push && break
