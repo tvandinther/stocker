@@ -6,7 +6,8 @@
   "scripts": {
     "scrape": "node scrape.mjs",
     "createDockerhubRepository": "node createDockerhubRepository.mjs",
-    "updateDockerhubRepository": "node updateDockerhubRepository.mjs"
+    "updateDockerhubRepository": "node updateDockerhubRepository.mjs",
+    "validateRepositories": "node validateRepositories.mjs"
   },
   "author": "",
   "license": "ISC",
@@ -14,6 +15,8 @@
     "@actions/core": "^1.10.0",
     "@octokit/auth-token": "^3.0.3",
     "@octokit/graphql": "^5.0.5",
-    "js-yaml": "^4.1.0"
+    "js-yaml": "^4.1.0",
+    "zod": "^3.21.4",
+    "zod-validation-error": "^1.0.1"
   }
 }

@@ -1,0 +1,28 @@
+name: "Validate repositories"
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+    paths:
+      - "repositories/**"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      
+      - run: npm ci
+        working-directory: scripts
+
+      - name: Validate repositories
+        run: npm run validateFiles
+        working-directory: scripts
