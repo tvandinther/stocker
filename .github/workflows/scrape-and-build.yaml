@@ -10,18 +10,27 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       result: ${{ steps.scrapejob.outputs.result }}
+    
+    defaults:
+      run:
+        shell: bash
+
     steps:
+      
       - uses: actions/checkout@v3
+      
       - uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: 18
+      
       - run: npm ci
-        working-directory: ./scripts
+        working-directory: scripts
+      
       - id: scrapejob
         run: npm run scrape
-        working-directory: ./scripts
+        working-directory: scripts
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
 
   build:
     needs: scrape
@@ -29,51 +38,137 @@ jobs:
     strategy:
       matrix:
         job: ${{ fromJSON(needs.scrape.outputs.result) }}
+    
+    permissions:
+      contents: write
+      issues: write
+
+    env:
+      SOURCE_OWNER: ${{ fromJSON(matrix.job).source.owner }}
+      SOURCE_REPOSITORY: ${{ fromJSON(matrix.job).source.repository }}
+      SOURCE_TAG: ${{ fromJSON(matrix.job).source.tag }}
+      IMAGE_REPOSITORY: ${{ fromJSON(matrix.job).image.repository }}
+      IMAGE_TAG: ${{ fromJSON(matrix.job).image.tag }}
+
+    defaults:
+      run:
+        shell: bash
+
     steps:
+      
       - uses: actions/checkout@v3
         with:
-          repository: ${{ fromJSON(matrix.job).source.owner }}/${{ fromJSON(matrix.job).source.repository }}
-          ref: ${{ fromJSON(matrix.job).source.tag }}
-          path: ${{ fromJSON(matrix.job).source.repository }}
+          repository: ${{ env.SOURCE_OWNER }}/${{ env.SOURCE_REPOSITORY }}
+          ref: ${{ env.SOURCE_TAG }}
+          path: ${{ env.SOURCE_REPOSITORY }}
+      
       - uses: actions/checkout@v3
         with:
           path: stocker
-      # - idempotently create the image repository and update the readme
-      - name: Login to Docker Hub
-        id: login
-        shell: bash
+      
+      - name: Build image
         run: |
-          response=$(curl -s -H "Content-Type: application/json" -X POST -d '{"username": "${{ secrets.DOCKER_HUB_USERNAME }}", "password": "${{ secrets.DOCKER_HUB_PASSWORD }}"}' https://hub.docker.com/v2/users/login/)
-          token=$(echo $response | jq -r .token)
-          echo "::add-mask::token=${token}" >> GITHUB_OUTPUT
-      - shell: bash
+          exec 2> >(tee -a /tmp/error.log >&2) > >(tee -a /tmp/out.log)
+          docker build \
+            --file stocker/repositories/${{ env.IMAGE_REPOSITORY }}/Dockerfile \
+            --tag ${{ vars.DOCKERHUB_USERNAME }}/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }} \
+            --build-arg SOURCE_OWNER=${{ env.SOURCE_OWNER }} \
+            --build-arg SOURCE_REPOSITORY=${{ env.SOURCE_REPOSITORY }} \
+            --build-arg SOURCE_TAG=${{ env.SOURCE_TAG }} \
+            --build-arg IMAGE_REPOSITORY=${{ env.IMAGE_REPOSITORY }} \
+            --build-arg IMAGE_TAG=${{ env.IMAGE_TAG }} \
+            ${{ env.SOURCE_REPOSITORY }}
+
+      - name: Test image
+        env:
+          IMAGE: ${{ vars.DOCKERHUB_USERNAME }}/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
+        working-directory: stocker/repositories/${{ env.IMAGE_REPOSITORY }}
         run: |
-          curl -s -H "Authorization: JWT ${{ fromJSON(steps.login.outputs.response).token }}" "https://hub.docker.com/v2/repositories/" \
-          --data 'description=test' \
-          --data 'full_description=full-description' \
-          --data 'is_private=false' \
-          --data 'name=${{ fromJSON(matrix.job).source.repository }}' \
-          --data "namespace=imagestocker"
-          if [ $? -eq 0 ]; then
-            echo "Successfully created repository ${{ fromJSON(matrix.job).source.repository }}"
-          else
-            echo "Repository ${{ fromJSON(matrix.job).source.repository }} already exists"
-          fi
-      - uses: docker/build-push-action@v2
+          exec 2> >(tee -a /tmp/error.log >&2) > >(tee -a /tmp/out.log)
+          ./test.bash
+
+      - uses: actions/setup-node@v3
         with:
-          context: ${{ fromJSON(matrix.job).source.repository }}
-          file: stocker/repositories/${{ fromJSON(matrix.job).image.repository }}/Dockerfile
-          push: true
-          tags: stocker/${{ fromJSON(matrix.job).image.repository }}:${{ fromJSON(matrix.job).image.tag }}
-      - shell: bash
+          node-version: 18
+      
+      - run: npm ci
+        working-directory: stocker/scripts
+      
+      - run: npm run createDockerhubRepository
+        working-directory: stocker/scripts
+        env:
+          INPUT_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+          INPUT_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          INPUT_REPOSITORY: ${{ env.IMAGE_REPOSITORY }}
+      
+      - run: npm run updateDockerhubRepository
+        working-directory: stocker/scripts
+        env:
+          INPUT_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+          INPUT_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          INPUT_REPOSITORY: ${{ env.IMAGE_REPOSITORY }}
+          INPUT_FULL_DESCRIPTION_PATH: ${{ env.SOURCE_REPOSITORY }}/README.md
+
+      - uses: docker/login-action@v1
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push image
         run: |
-          cat <<- EOF > stocker/${{ fromJSON(matrix.job).image.repository }}/${{ fromJSON(matrix.job).image.tag }}
-            Successfully built and pushed stocker/${{ fromJSON(matrix.job).image.repository }}:${{ fromJSON(matrix.job).image.tag }}
+          exec 2> >(tee -a /tmp/error.log >&2) > >(tee -a /tmp/out.log)
+          docker push ${{ vars.DOCKERHUB_USERNAME }}/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
+
+      - name: Create success history file
+        if: ${{ success() }}
+        working-directory: stocker
+        run: |
+          mkdir -p .history/${{ env.IMAGE_REPOSITORY }}
+          cat <<- EOF > .history/${{ env.IMAGE_REPOSITORY }}/${{ env.IMAGE_TAG }}
+          Successfully built and pushed stocker/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
           EOF
+        
+      - name: Create failure history file
+        if: ${{ failure() }}
+        working-directory: stocker
+        run: |
+          mkdir -p .history/${{ env.IMAGE_REPOSITORY }}
+          cat <<- EOF > .history/${{ env.IMAGE_REPOSITORY }}/${{ env.IMAGE_TAG }}
+          Failed to build stocker/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          ---
+          EOF
+
+      - name: View failed job log
+        if: ${{ failure() }}
+        id: failure
+        run: |
+          set -Eeuo pipefail
+          echo "log=$(cat /tmp/error.log)" >> $GITHUB_OUTPUT
+        working-directory: stocker
+
+      - name: Append failed job log to history file
+        run: echo ${{ steps.failure.outputs.log }} >> .history/${{ env.IMAGE_REPOSITORY }}/${{ env.IMAGE_TAG }}
+        if: ${{ failure() }}\
+        working-directory: stocker
+
       - uses: stefanzweifel/git-auto-commit-action@v4
+        if: ${{ success() || failure() }}
         with:
-          commit_message: "Complete build stocker/${{ fromJSON(matrix.job).image.repository }}:${{ fromJSON(matrix.job).image.tag }}"
+          commit_message: "Complete build stocker/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}"
           commit_options: "--no-signoff"
-          file_pattern: stocker/${{ fromJSON(matrix.job).image.repository }}/${{ fromJSON(matrix.job).image.tag }}
+          file_pattern: .history/${{ env.IMAGE_REPOSITORY }}/${{ env.IMAGE_TAG }}
           repository: stocker
-          branch: main
+
+      - name: Create issue
+        if: ${{ failure() }}
+        uses: actions-ecosystem/action-create-issue@v1
+        with:
+          title: "Failed to build stocker/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}"
+          body: |
+            The build of stocker/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }} failed.
+            
+            ```
+            ${{ steps.failure.outputs.log }}
+            ```
+          labels: "bug"
+          github_token: ${{ github.token }}

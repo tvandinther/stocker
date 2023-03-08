@@ -1,0 +1,1 @@
+This image contains the promtool binary copied from [prom/prometheus](https://hub.docker.com/r/prom/prometheus).
