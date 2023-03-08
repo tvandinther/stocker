@@ -196,6 +196,6 @@ jobs:
           labels: "bug"
           github_token: ${{ github.token }}
 
-      # - uses: mxschmitt/action-tmate@v3
-      #   if: ${{ failure() }}
-      #   timeout-minutes: 10
+      - uses: mxschmitt/action-tmate@v3
+        if: ${{ failure() }}
+        timeout-minutes: 10
