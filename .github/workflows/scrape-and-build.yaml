@@ -11,8 +11,15 @@ jobs:
     outputs:
       result: ${{ steps.scrapejob.outputs.result }}
     
+    defaults:
+      run:
+        shell: bash
+
     steps:
       
+      - name: Set up logging
+        run: "exec 2> >(tee -a /log/stocker/error.log >&2) > >(tee -a /log/stocker/out.log)"
+
       - uses: actions/checkout@v3
       
       - uses: actions/setup-node@v3
@@ -162,7 +169,7 @@ jobs:
 
       - name: View failed job log
         id: failure
-        run: echo "log=$(gh run view --log-failed --job ${{ steps.jobs.outputs.job_id }})" >> $GITHUB_OUTPUT
+        run: echo "log=$(cat /log/stocker/error.log)" >> $GITHUB_OUTPUT
         if: ${{ failure() }}
         shell: bash
         working-directory: stocker
