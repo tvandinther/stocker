@@ -148,7 +148,7 @@ jobs:
 
       - name: Append failed job log to history file
         run: echo ${{ steps.failure.outputs.log }} >> .history/${{ env.IMAGE_REPOSITORY }}/${{ env.IMAGE_TAG }}
-        if: ${{ failure() }}\
+        if: ${{ failure() }}
         working-directory: stocker
 
       - name: Update repository with history file
