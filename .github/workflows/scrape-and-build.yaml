@@ -37,8 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # job: ${{ fromJSON(needs.scrape.outputs.result) }}
-        job: ["{\"source\":{\"owner\":\"prometheus\",\"repository\":\"prometheus\",\"tag\":\"v2.42.0\"},\"image\":{\"repository\":\"promtool\",\"tag\":\"v2.42.0\"}}"]
+        job: ${{ fromJSON(needs.scrape.outputs.result) }}
     
     permissions:
       contents: write
@@ -126,7 +125,7 @@ jobs:
         run: |
           mkdir -p .history/${{ env.IMAGE_REPOSITORY }}
           cat <<- EOF > .history/${{ env.IMAGE_REPOSITORY }}/${{ env.IMAGE_TAG }}
-            Successfully built and pushed stocker/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          Successfully built and pushed stocker/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
           EOF
         
       - name: Create failure history file
@@ -135,8 +134,8 @@ jobs:
         run: |
           mkdir -p .history/${{ env.IMAGE_REPOSITORY }}
           cat <<- EOF > .history/${{ env.IMAGE_REPOSITORY }}/${{ env.IMAGE_TAG }}
-            Failed to build stocker/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
-
+          Failed to build stocker/${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          ---
           EOF
 
       - name: View failed job log
