@@ -1,0 +1,10 @@
+- ~~Add PR validation workflow on repositories~~
+    - ~~Validate the schema of the config.yaml~~
+- Add a slash command to do the following for a seal of approval (make the bot a code owner)
+    - Run a test build against the latest tag in the source repository
+    - Test the test.bash script
+- Add issue close workflow
+    - Tests the related PR for a successful build
+    - Deletes the history file
+    - Merges the PR
+    - Closes the issue
