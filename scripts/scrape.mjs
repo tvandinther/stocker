@@ -108,7 +108,10 @@ async function getAll(imageRepositoryName) {
 async function processImageRepository(imageRepositoryName) {
   const { parsedReleases, builtTags, owner, repository } = await getAll(imageRepositoryName);
   const tagsAlreadyBuilt = new Set(builtTags);
-  const tagsInRepository = new Set(parsedReleases.map(release => release.tagName));
+  const validTags = parsedReleases
+    .map(release => release.tagName)
+    .filter(tag => /^[a-zA-Z0-9]+([._-]?[a-zA-Z0-9]+)*$/.test(tag));
+  const tagsInRepository = new Set(validTags);
   const tagsToBuild = tagsInRepository.difference(tagsAlreadyBuilt);
 
   console.log(`Found ${tagsToBuild.size} tags to build for ${owner}/${repository}`);
